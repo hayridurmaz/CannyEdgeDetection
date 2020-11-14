@@ -1,8 +1,8 @@
-import cv2
+from statistics import mean
+
+import matplotlib.image as mpimg
 import numpy as np
 from matplotlib import pyplot as plt
-import matplotlib.image as mpimg
-from statistics import mean
 
 
 def grayscale(img):
@@ -105,17 +105,29 @@ def convolve2D(image, kernel, padding=0, strides=1):
 #             mc = mc + K[dr + kr, dc + kc] * mrc
 #     return mc
 
-# def convolution(image,kernel):
-#     image_h = image.shape[0]
-#     image_w = image.shape[1]
-#
-#     kernel_h = kernel.shape[0]
-#     kernel_w = kernel.shape[1]
-#     for i in image_h:
-#         for j in image_w:
-#             acc=0
-#             for k in kernel_h:
-#                 for l in kernel_w:
+def convolution(image, kernel):
+    """
+    This function which takes an image and a kernel and returns the convolution of them.
+    :param image: a numpy array of size [image_height, image_width].
+    :param kernel: a numpy array of size [kernel_height, kernel_width].
+    :return: a numpy array of size [image_height, image_width] (convolution output).
+    """
+    # Flip the kernel
+    kernel = np.flipud(np.fliplr(kernel))
+    # convolution output filled with zeros
+    output = np.zeros_like(image)
+
+    # Add zero padding to the input image
+    image_padded = np.zeros((image.shape[0] + 2, image.shape[1] + 2))
+    image_padded[1:-1, 1:-1] = image
+
+    # Loop over every pixel of the image
+    for x in range(image.shape[0]):
+        for y in range(image.shape[1]):
+            # element-wise multiplication of the kernel and the image
+            output[x, y] = (kernel * image_padded[x: x + 3, y: y + 3]).sum()
+
+    return output
 
 
 # def convolution(oldimage, kernel):
@@ -163,7 +175,7 @@ def GaussianBlurImage(image, sigma):
     # image = imread(image)
     image = np.asarray(image)
     # print(image)
-    filter_size = 2 * int(4 * sigma + 0.5) + 1
+    filter_size = 3
     gaussian_filter = np.zeros((filter_size, filter_size), np.float32)
     m = filter_size // 2
     n = filter_size // 2
@@ -176,11 +188,11 @@ def GaussianBlurImage(image, sigma):
 
     im_filtered = np.zeros_like(image, dtype=np.float32)
     for c in range(3):
-        im_filtered[:, :, c] = convolve2D(image[:, :, c], gaussian_filter)
-    return (im_filtered.astype(np.uint8))
+        im_filtered[:, :, c] = convolution(image[:, :, c], gaussian_filter)
+    return im_filtered.astype(np.uint8)  # makes image black, ie all 0's
 
 
 if __name__ == '__main__':
     img = mpimg.imread('images/Lenna.png')
-    imgplot = plt.imshow(rgb_to_gray(img))
+    imgplot = plt.imshow(GaussianBlurImage(img, 1))
     plt.show()
