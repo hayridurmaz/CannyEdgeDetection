@@ -181,6 +181,6 @@ def GaussianBlurImage(image, sigma):
 
 
 if __name__ == '__main__':
-    img = mpimg.imread('Lenna.png')
+    img = mpimg.imread('images/Lenna.png')
     imgplot = plt.imshow(rgb_to_gray(img))
     plt.show()
