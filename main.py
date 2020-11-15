@@ -1,8 +1,11 @@
 from statistics import mean
 
-import cv2
+import matplotlib.image as mpimg
 import numpy as np
 from matplotlib import pyplot as plt
+import cv2
+from scipy import ndimage
+from skimage import img_as_ubyte
 
 
 def grayscale(img):
@@ -23,7 +26,7 @@ def grayscale(img):
             newImage[i][j][2] = avg
             newImage[i][j][3] = 1  # alpha value to be 1
 
-    return newImage
+    return newImage[:, :, 0]
 
 
 def rgb_to_gray(img):
@@ -39,11 +42,12 @@ def rgb_to_gray(img):
 
     Avg = (R + G + B)
     grayImage = img
+    # for i in range(3):
+    #     grayImage[:, :, i] = Avg
+    # return grayImage
 
-    for i in range(3):
-        grayImage[:, :, i] = Avg
-
-    return grayImage
+    grayImage[:, :, 0] = Avg
+    return grayImage[:, :, 0]
 
 
 def convolution(image, kernel):
@@ -78,8 +82,7 @@ def GaussianBlurImage(image, sigma):
     normal = 1 / (2.0 * np.pi * sigma ** 2)
     gaussian_filter = np.exp(-((x ** 2 + y ** 2) / (2.0 * sigma ** 2))) * normal
     im_filtered = np.zeros_like(image)
-    for c in range(3):
-        im_filtered[:, :, c] = convolution(image[:, :, c], gaussian_filter)
+    im_filtered[:, :] = convolution(image[:, :], gaussian_filter)
     return im_filtered
 
 
@@ -97,12 +100,155 @@ def FindGradients(image):
          [-1, -2, -1]]
     ) / 8.0
 
-    im_filtered = np.zeros_like(image)
-    for c in range(3):
-        im_filtered[:, :, c] = convolution(image[:, :, c], sobel_kernel_x)
-    for c in range(3):
-        im_filtered[:, :, c] = convolution(image[:, :, c], sobel_kernel_y)
-    return im_filtered
+    '''
+    when x and y filtered matrices are same, it overrides.
+    '''
+
+    im_filtered_x = np.zeros_like(image)
+    im_filtered_y = np.zeros_like(image)
+    im_filtered_x[:, :] = convolution(img[:, :], sobel_kernel_x)
+    im_filtered_y[:, :] = convolution(img[:, :], sobel_kernel_y)
+
+    G = np.hypot(im_filtered_x, im_filtered_y)
+    G = G / G.max() * 255
+    theta = np.arctan2(im_filtered_y, im_filtered_x)
+    return (G.astype(np.uint8), theta)
+
+
+# def FindGradients(image):
+#     sobel_kernel_x = np.array(
+#         [
+#             [-1, 0, 1],
+#             [-2, 0, 2],
+#             [-1, 0, 1]
+#         ]
+#     ) / 8.0
+#     sobel_kernel_y = np.array(
+#         [[1, 2, 1],
+#          [0, 0, 0],
+#          [-1, -2, -1]]
+#     ) / 8.0
+#
+#     im_filtered = np.zeros_like(image)
+#     im_filtered[:, :] = convolution(image[:, :], sobel_kernel_x)
+#     im_filtered[:, :] = convolution(image[:, :], sobel_kernel_y)
+#     return im_filtered
+
+
+def sobel_filters(img):
+    Kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
+    Ky = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
+
+    Ix = ndimage.filters.convolve(img, Kx)
+    Iy = ndimage.filters.convolve(img, Ky)
+
+    G = np.hypot(Ix, Iy)
+    G = G / G.max() * 255
+    theta = np.arctan2(Iy, Ix)
+
+    return (G.astype(np.uint8), theta)
+
+
+# def sobel_filters(img):
+#     Kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
+#     Ky = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
+#
+#     Ix = ndimage.filters.convolve(img, Kx)
+#     Iy = ndimage.filters.convolve(img, Ky)
+#
+#     # im_filtered_x = np.zeros_like(img)
+#     # im_filtered_y = np.zeros_like(img)
+#     #     im_filtered_x[:, :, c] = convolution(img[:, :, c], Kx)
+#     #     im_filtered_y[:, :, c] = convolution(img[:, :, c], Ky)
+#
+#     G = np.hypot(Ix, Iy)
+#     G = G / G.max() * 255
+#     theta = np.arctan2(Iy, Ix)
+#
+#     return (G.astype(np.uint8), theta)
+
+
+def threshold(img, lowThresholdRatio=0.05, highThresholdRatio=0.09):
+    highThreshold = img.max() * highThresholdRatio;
+    lowThreshold = highThreshold * lowThresholdRatio;
+
+    M, N = img.shape
+    res = np.zeros((M, N), dtype=np.int32)
+
+    weak = np.int32(25)
+    strong = np.int32(255)
+
+    strong_i, strong_j = np.where(img >= highThreshold)
+    zeros_i, zeros_j = np.where(img < lowThreshold)
+
+    weak_i, weak_j = np.where((img <= highThreshold) & (img >= lowThreshold))
+
+    res[strong_i, strong_j] = strong
+    res[weak_i, weak_j] = weak
+
+    return res, weak, strong
+
+
+def non_max_suppression(img, D):
+    M, N = img.shape
+    Z = np.zeros((M, N), dtype=np.int32)
+    angle = D * 180. / np.pi
+    angle[angle < 0] += 180
+
+    for i in range(1, M - 1):
+        for j in range(1, N - 1):
+            try:
+                q = 255
+                r = 255
+
+                # angle 0
+                if (0 <= angle[i, j] < 22.5) or (157.5 <= angle[i, j] <= 180):
+                    q = img[i, j + 1]
+                    r = img[i, j - 1]
+                # angle 45
+                elif (22.5 <= angle[i, j] < 67.5):
+                    q = img[i + 1, j - 1]
+                    r = img[i - 1, j + 1]
+                # angle 90
+                elif (67.5 <= angle[i, j] < 112.5):
+                    q = img[i + 1, j]
+                    r = img[i - 1, j]
+                # angle 135
+                elif (112.5 <= angle[i, j] < 157.5):
+                    q = img[i - 1, j - 1]
+                    r = img[i + 1, j + 1]
+
+                if (img[i, j] >= q) and (img[i, j] >= r):
+                    Z[i, j] = img[i, j]
+                else:
+                    Z[i, j] = 0
+
+            except IndexError as e:
+                pass
+
+    return Z
+
+
+def hysteresis(img, weak_pixel, strong_pixel):
+    M, N = img.shape
+    weak = weak_pixel
+    strong = strong_pixel
+
+    for i in range(1, M - 1):
+        for j in range(1, N - 1):
+            if (img[i, j] == weak):
+                try:
+                    if ((img[i + 1, j - 1] == strong) or (img[i + 1, j] == strong) or (img[i + 1, j + 1] == strong)
+                            or (img[i, j - 1] == strong) or (img[i, j + 1] == strong)
+                            or (img[i - 1, j - 1] == strong) or (img[i - 1, j] == strong) or (
+                                    img[i - 1, j + 1] == strong)):
+                        img[i, j] = strong
+                    else:
+                        img[i, j] = 0
+                except IndexError as e:
+                    pass
+
+    return img
 
 
 def BlurImage(image):
@@ -114,16 +260,37 @@ def BlurImage(image):
         ]
     ) / 9.0
     im_filtered = np.zeros_like(image)
-    for c in range(3):
-        im_filtered[:, :, c] = convolution(image[:, :, c], mean_kernel)
+    im_filtered[:, :] = convolution(image[:, :], mean_kernel)
     return im_filtered
 
 
 if __name__ == '__main__':
-    img = cv2.imread('images/Lenna.png')
+    # img = cv2.imread('images/Lenna.png')
+    # img = mpimg.imread('images/Lenna.png')
+    img = mpimg.imread('deneme.png')
+    img = img_as_ubyte(img)
+    # img = cv2.imread('deneme.png')
+    imgplot = plt.imshow(img)
+    plt.show()
     img = rgb_to_gray(img)
-    # img = BlurImage(img)
-    img = GaussianBlurImage(img, 1)
-    img = FindGradients(img)
+    plt.set_cmap(plt.get_cmap(name='gray'))
+    imgplot = plt.imshow(img)
+    plt.show()
+    img = BlurImage(img)
+    # img = GaussianBlurImage(img, 1)
+    imgplot = plt.imshow(img)
+    plt.show()
+    img, D = FindGradients(img)
+    # img = FindGradients(img)
+    # img, D = sobel_filters(img)
+    imgplot = plt.imshow(img)
+    plt.show()
+    # img = non_max_suppression(img, D)
+    imgplot = plt.imshow(img)
+    plt.show()
+    img, weak, strong = threshold(img)
+    imgplot = plt.imshow(img)
+    plt.show()
+    img = hysteresis(img, weak, strong)
     imgplot = plt.imshow(img)
     plt.show()
