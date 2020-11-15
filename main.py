@@ -7,6 +7,11 @@ import cv2
 from scipy import ndimage
 from skimage import img_as_ubyte
 
+weak = np.int32(75)
+strong = np.int32(255)
+lowThresholdRatio = 0.05
+highThresholdRatio = 0.25
+
 
 def grayscale(img):
     # second choice grayscale image
@@ -115,27 +120,6 @@ def FindGradients(image):
     return (G.astype(np.uint8), theta)
 
 
-def threshold(img, lowThresholdRatio=0.05, highThresholdRatio=0.09):
-    highThreshold = img.max() * highThresholdRatio;
-    lowThreshold = highThreshold * lowThresholdRatio;
-
-    M, N = img.shape
-    res = np.zeros((M, N), dtype=np.int32)
-
-    weak = np.int32(25)
-    strong = np.int32(255)
-
-    strong_i, strong_j = np.where(img >= highThreshold)
-    zeros_i, zeros_j = np.where(img < lowThreshold)
-
-    weak_i, weak_j = np.where((img <= highThreshold) & (img >= lowThreshold))
-
-    res[strong_i, strong_j] = strong
-    res[weak_i, weak_j] = weak
-
-    return res, weak, strong
-
-
 def non_max_suppression(img, D):
     M, N = img.shape
     Z = np.zeros((M, N), dtype=np.int32)
@@ -176,10 +160,27 @@ def non_max_suppression(img, D):
     return Z
 
 
-def hysteresis(img, weak_pixel, strong_pixel):
+def threshold(img):
+    # TODO: sıkıntı
+    highThreshold = img.max() * highThresholdRatio;
+    lowThreshold = highThreshold * lowThresholdRatio;
+
     M, N = img.shape
-    weak = weak_pixel
-    strong = strong_pixel
+    res = np.zeros((M, N), dtype=np.int32)
+
+    strong_i, strong_j = np.where(img >= highThreshold)
+    zeros_i, zeros_j = np.where(img < lowThreshold)
+
+    weak_i, weak_j = np.where((img <= highThreshold) & (img >= lowThreshold))
+
+    res[strong_i, strong_j] = strong
+    res[weak_i, weak_j] = weak
+
+    return res
+
+
+def hysteresis(img):
+    M, N = img.shape
 
     for i in range(1, M - 1):
         for j in range(1, N - 1):
@@ -211,33 +212,30 @@ def BlurImage(image):
     return im_filtered
 
 
+def showPlot(img):
+    plt.imshow(img)
+    plt.show()
+
+
 if __name__ == '__main__':
     # img = cv2.imread('images/Lenna.png')
-    # img = mpimg.imread('images/Lenna.png')
-    img = mpimg.imread('deneme.png')
+    img = mpimg.imread('images/Lenna.png')
+    # img = mpimg.imread('deneme.png')
     img = img_as_ubyte(img)
     # img = cv2.imread('deneme.png')
-    imgplot = plt.imshow(img)
-    plt.show()
+    showPlot(img)
     img = rgb_to_gray(img)
     plt.set_cmap(plt.get_cmap(name='gray'))
-    imgplot = plt.imshow(img)
-    plt.show()
+    showPlot(img)
     img = BlurImage(img)
-    # img = GaussianBlurImage(img, 1)
+    # img = GaussianBlurImage(img, 2)
     imgplot = plt.imshow(img)
     plt.show()
     img, D = FindGradients(img)
-    # img = FindGradients(img)
-    # img, D = sobel_filters(img)
-    imgplot = plt.imshow(img)
-    plt.show()
+    showPlot(img)
     img = non_max_suppression(img, D)
-    imgplot = plt.imshow(img)
-    plt.show()
-    img, weak, strong = threshold(img)
-    imgplot = plt.imshow(img)
-    plt.show()
-    img = hysteresis(img, weak, strong)
-    imgplot = plt.imshow(img)
-    plt.show()
+    showPlot(img)
+    img = threshold(img)
+    showPlot(img)
+    img = hysteresis(img)
+    showPlot(img)
