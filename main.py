@@ -101,71 +101,18 @@ def FindGradients(image):
     ) / 8.0
 
     '''
-    when x and y filtered matrices are same, it overrides.
+    note: when x and y filtered matrices are same, it overrides.
     '''
-
+    image = image.astype('int32')  # int8 calculations not enough
     im_filtered_x = np.zeros_like(image)
     im_filtered_y = np.zeros_like(image)
-    im_filtered_x[:, :] = convolution(img[:, :], sobel_kernel_x)
-    im_filtered_y[:, :] = convolution(img[:, :], sobel_kernel_y)
+    im_filtered_x[:, :] = convolution(image[:, :], sobel_kernel_x)
+    im_filtered_y[:, :] = convolution(image[:, :], sobel_kernel_y)
 
     G = np.hypot(im_filtered_x, im_filtered_y)
     G = G / G.max() * 255
     theta = np.arctan2(im_filtered_y, im_filtered_x)
     return (G.astype(np.uint8), theta)
-
-
-# def FindGradients(image):
-#     sobel_kernel_x = np.array(
-#         [
-#             [-1, 0, 1],
-#             [-2, 0, 2],
-#             [-1, 0, 1]
-#         ]
-#     ) / 8.0
-#     sobel_kernel_y = np.array(
-#         [[1, 2, 1],
-#          [0, 0, 0],
-#          [-1, -2, -1]]
-#     ) / 8.0
-#
-#     im_filtered = np.zeros_like(image)
-#     im_filtered[:, :] = convolution(image[:, :], sobel_kernel_x)
-#     im_filtered[:, :] = convolution(image[:, :], sobel_kernel_y)
-#     return im_filtered
-
-
-def sobel_filters(img):
-    Kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
-    Ky = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
-
-    Ix = ndimage.filters.convolve(img, Kx)
-    Iy = ndimage.filters.convolve(img, Ky)
-
-    G = np.hypot(Ix, Iy)
-    G = G / G.max() * 255
-    theta = np.arctan2(Iy, Ix)
-
-    return (G.astype(np.uint8), theta)
-
-
-# def sobel_filters(img):
-#     Kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
-#     Ky = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
-#
-#     Ix = ndimage.filters.convolve(img, Kx)
-#     Iy = ndimage.filters.convolve(img, Ky)
-#
-#     # im_filtered_x = np.zeros_like(img)
-#     # im_filtered_y = np.zeros_like(img)
-#     #     im_filtered_x[:, :, c] = convolution(img[:, :, c], Kx)
-#     #     im_filtered_y[:, :, c] = convolution(img[:, :, c], Ky)
-#
-#     G = np.hypot(Ix, Iy)
-#     G = G / G.max() * 255
-#     theta = np.arctan2(Iy, Ix)
-#
-#     return (G.astype(np.uint8), theta)
 
 
 def threshold(img, lowThresholdRatio=0.05, highThresholdRatio=0.09):
@@ -285,7 +232,7 @@ if __name__ == '__main__':
     # img, D = sobel_filters(img)
     imgplot = plt.imshow(img)
     plt.show()
-    # img = non_max_suppression(img, D)
+    img = non_max_suppression(img, D)
     imgplot = plt.imshow(img)
     plt.show()
     img, weak, strong = threshold(img)
