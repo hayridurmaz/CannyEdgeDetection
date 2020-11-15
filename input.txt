@@ -1,0 +1,6 @@
+75 255 0.05 0.25
+images/Lenna.png
+images/cameraman.jpg
+images/fruit-bowl.jpg
+images/house.jpg
+images/woman.JPG

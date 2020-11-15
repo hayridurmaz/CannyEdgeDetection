@@ -46,7 +46,8 @@ def rgb_to_gray(img):
     B = (B * .114)
 
     Avg = (R + G + B)
-    grayImage = img
+    grayImage = np.array(img)
+    grayImage.setflags(write=1)
     # for i in range(3):
     #     grayImage[:, :, i] = Avg
     # return grayImage
@@ -161,7 +162,6 @@ def non_max_suppression(img, D):
 
 
 def threshold(img):
-    # TODO: sıkıntı
     highThreshold = img.max() * highThresholdRatio;
     lowThreshold = highThreshold * lowThresholdRatio;
 
@@ -217,14 +217,12 @@ def showPlot(img):
     plt.show()
 
 
-if __name__ == '__main__':
-    # img = cv2.imread('images/Lenna.png')
-    img = mpimg.imread('images/Lenna.png')
-    # img = mpimg.imread('deneme.png')
+def cannyEdgeDetection(img):
     img = img_as_ubyte(img)
     # img = cv2.imread('deneme.png')
     showPlot(img)
-    img = rgb_to_gray(img)
+    if len(img.shape) == 3:
+        img = rgb_to_gray(img)
     plt.set_cmap(plt.get_cmap(name='gray'))
     showPlot(img)
     img = BlurImage(img)
@@ -239,3 +237,26 @@ if __name__ == '__main__':
     showPlot(img)
     img = hysteresis(img)
     showPlot(img)
+
+
+def readImage(path='images/Lenna.png'):
+    # img = cv2.imread('images/Lenna.png')
+    img = mpimg.imread(path)
+    # img = mpimg.imread('deneme.png')
+    return img
+
+
+if __name__ == '__main__':
+    input = open("input.txt", "r")
+    input = input.readlines()
+    for i in range(len(input)):
+        print(input[i])
+        if i == 0:
+            inputNumbers = input[i].split(" ")
+            weak = np.int32(int(inputNumbers[0]))
+            strong = np.int32(int(inputNumbers[1]))
+            lowThresholdRatio = float(inputNumbers[2])
+            highThresholdRatio = float(inputNumbers[3])
+        else:
+            img = readImage(input[i][:-1])
+            cannyEdgeDetection(img)
