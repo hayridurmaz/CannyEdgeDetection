@@ -200,7 +200,11 @@ def showPlot(img):
     plt.show()
 
 
-def cannyEdgeDetection(img):
+def saveOutput(img, name):
+    mpimg.imsave("output/" + name, img)
+
+
+def cannyEdgeDetection(img, name):
     img = img_as_ubyte(img)
     # img = cv2.imread('deneme.png')
     showPlot(img)
@@ -220,6 +224,7 @@ def cannyEdgeDetection(img):
     showPlot(img)
     img = applyHysteresisThreshold(img)
     showPlot(img)
+    saveOutput(img, name)
 
 
 def readImage(path='images/Lenna.png'):
@@ -242,4 +247,4 @@ if __name__ == '__main__':
             highThresholdRatio = float(inputNumbers[3])
         else:
             img = readImage(inputImages[i][:-1])
-            cannyEdgeDetection(img)
+            cannyEdgeDetection(img, inputImages[i][:-1])
