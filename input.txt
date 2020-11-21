@@ -1,6 +1,6 @@
 75 255 5 20
-images/Lenna.png
-images/cameraman.jpg
-images/fruit-bowl.jpg
-images/house.jpg
-images/woman.JPG
+Lenna.png
+cameraman.jpg
+fruit-bowl.jpg
+house.jpg
+woman.JPG

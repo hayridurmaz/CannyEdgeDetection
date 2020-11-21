@@ -6,6 +6,8 @@ from matplotlib import pyplot as plt
 import cv2
 from scipy import ndimage
 from skimage import img_as_ubyte
+from pathlib import Path
+
 
 weak = np.int32(75)
 strong = np.int32(255)
@@ -120,9 +122,6 @@ def applyNonMaximaSuppression(img, D):
             else:
                 Z[i, j] = 0
 
-        # except IndexError as e:
-        #     pass
-
     return Z
 
 
@@ -179,7 +178,7 @@ def applyHysteresisThreshold(img):
 
 def BlurImage(image):
     '''
-    This function blurs image with an average filter
+        This function blurs image with an mean filter
     :param image:
     :return:
     '''
@@ -201,6 +200,7 @@ def showPlot(img):
 
 
 def saveOutput(img, name):
+    Path("output").mkdir(parents=True, exist_ok=True)
     mpimg.imsave("output/" + name, img)
 
 
@@ -208,28 +208,32 @@ def cannyEdgeDetection(img, name):
     img = img_as_ubyte(img)
     # img = cv2.imread('deneme.png')
     showPlot(img)
+    plt.set_cmap(plt.get_cmap(name='gray'))
     if len(img.shape) == 3:
         img = rgb_to_gray(img)
+        saveOutput(img, "gray_" + name)
     plt.set_cmap(plt.get_cmap(name='gray'))
     showPlot(img)
     img = BlurImage(img)
+    saveOutput(img, "blurred_" + name)
     # img = GaussianBlurImage(img, 2)
-    imgplot = plt.imshow(img)
-    plt.show()
     img, D = FindGradients(img)
+    saveOutput(img, "gradient_" + name)
     showPlot(img)
     img = applyNonMaximaSuppression(img, D)
     showPlot(img)
+    saveOutput(img, "nonmaximasuppression_" + name)
     img = threshold(img)
     showPlot(img)
+    saveOutput(img, "threshold_" + name)
     img = applyHysteresisThreshold(img)
     showPlot(img)
-    saveOutput(img, name)
+    saveOutput(img, "output_" + name)
 
 
-def readImage(path='images/Lenna.png'):
+def readImage(path='Lenna.png'):
     # img = cv2.imread('images/Lenna.png')
-    img = mpimg.imread(path)
+    img = mpimg.imread("images/" + path)
     # img = mpimg.imread('deneme.png')
     return img
 
